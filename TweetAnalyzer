@@ -2,6 +2,12 @@
 import tweepy
 import matplotlib.pyplot as plt
 import numpy as np
+import xlrd
+import xlsxwriter
+import pathlib
+import openpyxl
+from openpyxl import Workbook
+from openpyxl import load_workbook
 from statistics import stdev
 from statistics import median
 from statistics import variance
@@ -9,10 +15,10 @@ from collections import Counter
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 # Keys from Twitter Dev Console
-consumer_key = "xxxxxxx"
-consumer_secret = "xxxxxx"
-access_token = "xxxxx"
-access_token_secret = "xxxxx"
+consumer_key = "xxxxxx"
+consumer_secret = "xxxxx"
+access_token = "xxxxxx"
+access_token_secret = "xxxxxxx"
 # Initializing variables
 totalLen = 0
 totalTweets = 0
@@ -27,6 +33,7 @@ negativeSentimentArray = []
 query = ""
 language = ""
 totalTweetText = ""
+row = 0
 
 # Attempts to verify API keys, prints failure if not verified
 try:
@@ -45,12 +52,31 @@ def inputSearchLanguage():
     global query
     global language
     # Using a query to search for tweets with a certain hashtag
-    query = input("What hashtag would you like to search for? ") + "-filter:retweets"
+    query = "COVID-19" + "-filter:retweets"
     # Specifying a language
-    language = input("What language would you like to search for? ")
+    language = "en"
 
 
-def searchTweets():
+def pullTweets():
+    global row
+    file = pathlib.Path("tweets.xlsx")
+    if file.exists():
+        book = load_workbook(filename='tweets.xlsx')
+    else:
+         book = Workbook()
+
+    nworksheet = book.active
+    # Calling search + language function for the api to narrow the search
+    results = api.search(q=query, lang=language, place_country="US")
+    for tweet in results:
+        # Prints Twitter username, their tweet, and their location(if available)
+        print(tweet.user.screen_name, "Tweeted: ", tweet.text, tweet.user.location)
+        nworksheet.append([tweet.text])
+        row += 1
+    book.save('tweets.xlsx')
+
+
+def calculateValues():
     # Creating global variables
     global totalLen
     global totalTweets
@@ -63,30 +89,34 @@ def searchTweets():
     global totalTweetText
     global positiveTotalText
     global negativeTotalText
+    global row
     vader = SentimentIntensityAnalyzer()
-    # Calling search + language function for the api to narrow the search
-    results = api.search(q=query, lang=language, place_country="US")
-    for tweet in results:
-        # Prints Twitter username, their tweet, and their location(if available)
-        print(tweet.user.screen_name, "Tweeted: ", tweet.text, tweet.user.location)
+    workbook = xlrd.open_workbook("tweets.xlsx")
+    sheet = workbook.sheet_by_index(0)
+    for rowx in range(sheet.nrows):
+        line = sheet.row_values(rowx)
+        tweet = line[0]
+        print(tweet)
+
         # Converts twitter characters into a number
-        totalLen = totalLen + len(tweet.text)
-        # Counts the number of total tweets
+        totalLen = totalLen + len(tweet)
+        # Counts the number of total tweet
         totalTweets = totalTweets + 1
-        tweetArray.append(len(tweet.text))
-        totalWords = totalWords + len(tweet.text.split(" "))
-        wordArray.append(len(tweet.text.split(" ")))
-        totalTweetText = totalTweetText + tweet.text
-        sentimentAnalysis = vader.polarity_scores(tweet.text)
+        tweetArray.append(len(tweet))
+        totalWords = totalWords + len(tweet.split(" "))
+        wordArray.append(len(tweet.split(" ")))
+        totalTweetText = totalTweetText + tweet
+        sentimentAnalysis = vader.polarity_scores(tweet)
 
         if sentimentAnalysis['compound'] > .05:
-            positiveSentimentArray.append(tweet.text)
-            positiveTotalText = positiveTotalText + tweet.text
+            positiveSentimentArray.append(tweet)
+            positiveTotalText = positiveTotalText + tweet
         elif sentimentAnalysis['compound'] < -.05:
-            negativeSentimentArray.append(tweet.text)
-            negativeTotalText = negativeTotalText + tweet.text
+            negativeSentimentArray.append(tweet)
+            negativeTotalText = negativeTotalText + tweet
         else:
-            neutralSentimentArray.append(tweet.text)
+            neutralSentimentArray.append(tweet)
+
 
 def printStats():
     # Prints a list of statistics(mean, median, variance) for both characters and words
@@ -173,5 +203,6 @@ def wordGraphs(wordCount, sentiment):
     plt.show()
 
 inputSearchLanguage()
-searchTweets()
+pullTweets()
+calculateValues()
 printStats()
