@@ -3,9 +3,7 @@ import tweepy
 import matplotlib.pyplot as plt
 import numpy as np
 import xlrd
-import xlsxwriter
 import pathlib
-import openpyxl
 from openpyxl import Workbook
 from openpyxl import load_workbook
 from statistics import stdev
@@ -15,10 +13,10 @@ from collections import Counter
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 # Keys from Twitter Dev Console
-consumer_key = "xxxxxx"
-consumer_secret = "xxxxx"
-access_token = "xxxxxx"
-access_token_secret = "xxxxxxx"
+consumer_key = "xxxxx"
+consumer_secret = "xxxxxx"
+access_token = "xxxxx"
+access_token_secret = "xxxxxx"
 # Initializing variables
 totalLen = 0
 totalTweets = 0
@@ -52,27 +50,32 @@ def inputSearchLanguage():
     global query
     global language
     # Using a query to search for tweets with a certain hashtag
-    query = "COVID-19" + "-filter:retweets"
+    query = input("What tag would you like to search for?") + "-filter:retweets"
     # Specifying a language
-    language = "en"
+    language = input("What language would you like to search in?")
 
-
+#Pulls tweets and then uploads them to the spreadsheet
 def pullTweets():
     global row
+    # Sets file directory for worksheet
     file = pathlib.Path("tweets.xlsx")
     if file.exists():
+        # Loads up existing workbook
         book = load_workbook(filename='tweets.xlsx')
     else:
-         book = Workbook()
-
+        # Creates a new workbook if there is not one found already
+        book = Workbook()
+    # Creates a reference to the active worksheet
     nworksheet = book.active
     # Calling search + language function for the api to narrow the search
     results = api.search(q=query, lang=language, place_country="US")
     for tweet in results:
         # Prints Twitter username, their tweet, and their location(if available)
         print(tweet.user.screen_name, "Tweeted: ", tweet.text, tweet.user.location)
+        # Appends text to the worksheet and increases the row by one
         nworksheet.append([tweet.text])
         row += 1
+    # Saves the worksheet
     book.save('tweets.xlsx')
 
 
@@ -102,8 +105,11 @@ def calculateValues():
         totalLen = totalLen + len(tweet)
         # Counts the number of total tweet
         totalTweets = totalTweets + 1
+        # Appends the length of the tweets to an array
         tweetArray.append(len(tweet))
+        # Splits the tweets, takes the length, and then adds it to itself
         totalWords = totalWords + len(tweet.split(" "))
+        # Appends the split tweet to itself
         wordArray.append(len(tweet.split(" ")))
         totalTweetText = totalTweetText + tweet
         sentimentAnalysis = vader.polarity_scores(tweet)
@@ -122,8 +128,8 @@ def printStats():
     # Prints a list of statistics(mean, median, variance) for both characters and words
     print("Average Character Length of Collected Tweets: ", float(totalLen/totalTweets), "Total Tweets Collected: ", totalTweets, "Standard Deviation of Characters in Collected Tweets: ", stdev(tweetArray,float(totalLen/totalTweets)),"Median of Characters in Collected Tweets: ", median(tweetArray), "Variance of Characters in Collected Tweets: ", variance(tweetArray, float(totalLen/totalTweets)), "Average Word Count of Collected Tweets: ", totalWords/totalTweets, "Standard Deviation of Words in Collected Tweets: ", stdev(wordArray,float(totalWords/totalTweets)), "Variance of Words in Collected Tweets: ", variance(wordArray, float(totalWords/totalTweets)), "Median of Words in Collected Tweets: ", median(wordArray))
     print("Positive Tweets: " + str(positiveSentimentArray) + "Neutral/Undecided Tweets:" + str(neutralSentimentArray) + "Negative Tweets: " + str(negativeSentimentArray))
+    # Prints graphs for characters + words
     printGraphs()
-# Prints graphs for characters + words
 
 
 def printGraphs():
@@ -158,7 +164,8 @@ def printGraphs():
     if negativeSentimentArray == []:
         print("No negative tweets found")
     else: wordGraphs(negativeWordCount, "Negative")
-
+    print("erweqrqewrqwerrqwerqwerqwereqwrqwerq")
+    print(wordCount.most_common(5))
 
 def wordGraphs(wordCount, sentiment):
     # Creates a bar graph of most common words
@@ -184,7 +191,7 @@ def wordGraphs(wordCount, sentiment):
     plt.show()
 
     # Creates filtered bar graph for most common words
-    removeList = ["a","an","the","but","by","be","to","of","in","that","have","I","it","for","as","not","this", "and", "on", "is", "The", "would", "are", "were", "u","having", "has", "at", "been", "when", "which", "who", "their", "so", "up", "or", "yet", "=", "with","could","because","into","my", "you", "If", "This", "It", "Since", "all", "All", "since", "was", "Was", "your", "-", "his", "&amp;", "#COVID", "#covid","#COVID-19","#covid-19", "will", "can", " ", "they", "if", "He", "She", "she", "  ", "   ", "from", "us", "we", "A", "our", "You", "Your","how","about", "In", "How", "About", "do","Are"]
+    removeList = ["a","an","the","but","by","be","to","of","in","that","have","I","it","for","as","not","this", "and", "on", "is", "The", "would", "are", "were", "u","having", "has", "at", "been", "when", "which", "who", "their", "so", "up", "or", "yet", "=", "with","could","because","into","my", "you", "If", "This", "It", "Since", "all", "All", "since", "was", "Was", "your", "-", "his", "&amp;", "#COVID", "#covid","#COVID-19","#covid-19", "will", "can", " ", "they", "if", "He", "She", "she", "  ", "   ", "from", "us", "we", "A", "our", "You", "Your","how","about", "In", "How", "About", "do","Are","''",'',"", "during"]
     for word in removeList:
         if word in wordCount:
             del wordCount[word]
