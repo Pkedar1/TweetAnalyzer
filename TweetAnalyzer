@@ -2,8 +2,6 @@
 import tweepy
 import matplotlib.pyplot as plt
 import numpy as np
-import nltk
-from textblob import TextBlob
 from statistics import stdev
 from statistics import median
 from statistics import variance
@@ -11,23 +9,25 @@ from collections import Counter
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 # Keys from Twitter Dev Console
-consumer_key = "QobA0uHXSEzzKaCDdY6KkrYJs"
-consumer_secret = "frtKiSfi71JUSxmPkR8aXzhvM7oUB62G7TmlZA0aFoylZpVL9A"
-access_token = "798271300775112705-ZEgbi48y0ImeKKSxmoW4euzXRk0RqjO"
-access_token_secret = "5Pqzq4t8ypTxzYg3AaTfvpM7vgOdViWwzbnzMQgIZiAwD"
+consumer_key = "xxxxxxx"
+consumer_secret = "xxxxxx"
+access_token = "xxxxx"
+access_token_secret = "xxxxx"
 # Initializing variables
 totalLen = 0
 totalTweets = 0
 tweetArray = []
 totalWords = 0
 wordArray = []
+positiveTotalText = ""
+negativeTotalText = ""
 positiveSentimentArray = []
 neutralSentimentArray = []
 negativeSentimentArray = []
 query = ""
 language = ""
 totalTweetText = ""
-vader = SentimentIntensityAnalyzer
+
 # Attempts to verify API keys, prints failure if not verified
 try:
     # Creating authentication object
@@ -44,11 +44,11 @@ except:
 def inputSearchLanguage():
     global query
     global language
-    # Using a Query to search for tweets with a certain hashtag
-    query = input("What hashtag would you like to search for? ")
+    # Using a query to search for tweets with a certain hashtag
+    query = input("What hashtag would you like to search for? ") + "-filter:retweets"
     # Specifying a language
     language = input("What language would you like to search for? ")
-    # Searches for the specified query in the specified language
+
 
 def searchTweets():
     # Creating global variables
@@ -61,6 +61,9 @@ def searchTweets():
     global neutralSentimentArray
     global negativeSentimentArray
     global totalTweetText
+    global positiveTotalText
+    global negativeTotalText
+    vader = SentimentIntensityAnalyzer()
     # Calling search + language function for the api to narrow the search
     results = api.search(q=query, lang=language, place_country="US")
     for tweet in results:
@@ -74,24 +77,30 @@ def searchTweets():
         totalWords = totalWords + len(tweet.text.split(" "))
         wordArray.append(len(tweet.text.split(" ")))
         totalTweetText = totalTweetText + tweet.text
-        analysis = TextBlob(tweet.text)
-        analysis.correct()
-        if analysis.sentiment.polarity > 0:
+        sentimentAnalysis = vader.polarity_scores(tweet.text)
+
+        if sentimentAnalysis['compound'] > .05:
             positiveSentimentArray.append(tweet.text)
-        elif analysis.sentiment.polarity == 0:
-            neutralSentimentArray.append(tweet.text)
-        else:
+            positiveTotalText = positiveTotalText + tweet.text
+        elif sentimentAnalysis['compound'] < -.05:
             negativeSentimentArray.append(tweet.text)
+            negativeTotalText = negativeTotalText + tweet.text
+        else:
+            neutralSentimentArray.append(tweet.text)
 
 def printStats():
     # Prints a list of statistics(mean, median, variance) for both characters and words
     print("Average Character Length of Collected Tweets: ", float(totalLen/totalTweets), "Total Tweets Collected: ", totalTweets, "Standard Deviation of Characters in Collected Tweets: ", stdev(tweetArray,float(totalLen/totalTweets)),"Median of Characters in Collected Tweets: ", median(tweetArray), "Variance of Characters in Collected Tweets: ", variance(tweetArray, float(totalLen/totalTweets)), "Average Word Count of Collected Tweets: ", totalWords/totalTweets, "Standard Deviation of Words in Collected Tweets: ", stdev(wordArray,float(totalWords/totalTweets)), "Variance of Words in Collected Tweets: ", variance(wordArray, float(totalWords/totalTweets)), "Median of Words in Collected Tweets: ", median(wordArray))
-    print("Positive Tweets: " + str(positiveSentimentArray) + "Neutral Tweets:" + str(neutralSentimentArray) + "Negative Tweets: " + str(negativeSentimentArray))
+    print("Positive Tweets: " + str(positiveSentimentArray) + "Neutral/Undecided Tweets:" + str(neutralSentimentArray) + "Negative Tweets: " + str(negativeSentimentArray))
     printGraphs()
 # Prints graphs for characters + words
+
+
 def printGraphs():
     # Counts the most common words
     wordCount = Counter(totalTweetText.split(" "))
+    positiveWordCount = Counter(positiveTotalText.split(" "))
+    negativeWordCount = Counter(negativeTotalText.split(" "))
     # Bins for graphs
     characterBins = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240]
     wordBins = [0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48]
@@ -112,7 +121,16 @@ def printGraphs():
     plt.title("Histogram of Word Frequency")
     plt.text(0, 0, r'$\bar{x}=' + str(round(float(totalWords/totalTweets), 2)) + ', Sx= $ ' + str(round(stdev(wordArray,float(totalWords/totalTweets)), 2)))
     plt.show()
+    wordGraphs(wordCount, "")
+    if positiveSentimentArray == []:
+        print("No positive tweets found")
+    else:wordGraphs(positiveWordCount, "Positive")
+    if negativeSentimentArray == []:
+        print("No negative tweets found")
+    else: wordGraphs(negativeWordCount, "Negative")
 
+
+def wordGraphs(wordCount, sentiment):
     # Creates a bar graph of most common words
     info = wordCount.most_common(5)
     names, values = zip(*info)
@@ -122,25 +140,25 @@ def printGraphs():
     rects1 = ax.bar(ind, values, width, color='r')
     ax.set_ylabel('Frequency')
     ax.set_xlabel('Words')
-    ax.set_title('Bar Graph of Most Frequent Words')
+    ax.set_title('Bar Graph of Most Frequent ' + sentiment + ' Words')
     ax.set_xticks(ind+width/2.)
     ax.set_xticklabels(names)
     def autolabel(rects):
         for rect in rects:
             height = rect.get_height()
             ax.text(rect.get_x() + rect.get_width()/2., 1.05*height,
-                '%d' % int(height),
-                ha='center', va='bottom')
+                    '%d' % int(height),
+                    ha='center', va='bottom')
 
     autolabel(rects1)
     plt.show()
 
     # Creates filtered bar graph for most common words
-    removeList = ["a","an","the","but","by","be","to","of","in","that","have","I","it","for","as","not","this", "and", "on", "is", "The", "would", "are", "were", "u","having", "has", "at", "been", "when", "which", "who", "their", "so", "up", "or", "yet", "=", "with","could","because","into","my", "you", "If", "This", "It", "Since", "all", "All", "since"]
+    removeList = ["a","an","the","but","by","be","to","of","in","that","have","I","it","for","as","not","this", "and", "on", "is", "The", "would", "are", "were", "u","having", "has", "at", "been", "when", "which", "who", "their", "so", "up", "or", "yet", "=", "with","could","because","into","my", "you", "If", "This", "It", "Since", "all", "All", "since", "was", "Was", "your", "-", "his", "&amp;", "#COVID", "#covid","#COVID-19","#covid-19", "will", "can", " ", "they", "if", "He", "She", "she", "  ", "   ", "from", "us", "we", "A", "our", "You", "Your","how","about", "In", "How", "About", "do","Are"]
     for word in removeList:
         if word in wordCount:
             del wordCount[word]
-    info = wordCount.most_common(7)
+    info = wordCount.most_common(5)
     names, values = zip(*info)
     ind = np.arange(len(info))
     width = 0.35
@@ -148,7 +166,7 @@ def printGraphs():
     rects1 = ax.bar(ind, values, width, color='r')
     ax.set_ylabel('Frequency')
     ax.set_xlabel('Words')
-    ax.set_title('Bar Graph of Most Frequent Words(Filtered)')
+    ax.set_title('Bar Graph of Most Frequent ' + sentiment + ' Words(Filtered)')
     ax.set_xticks(ind+width/2.)
     ax.set_xticklabels(names)
     autolabel(rects1)
