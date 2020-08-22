@@ -4,6 +4,7 @@ import numpy as np
 import operator
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import sys
+import plotly.graph_objs as go
 
 
 # Initializing variables
@@ -22,6 +23,9 @@ posWordFreq = {}
 negWordFreq = {}
 sortedAll = {}
 numberOfWords = 5
+lati = []
+long = []
+
 
 
 def wordFreq(dict, wordText):
@@ -50,16 +54,20 @@ def calculateValues():
     global posWordFreq
     global negWordFreq
     global dictWordFreq
+    global lati
+    global long
 
     vader = SentimentIntensityAnalyzer()
     #Opens csv file using UTF-8 encoding
     csvFile = open('tweeta.csv', 'r', encoding = 'utf-8')
     #Reads csv file
-    #lines = csvFile.readlines()
-    splitTweets = csvFile.readlines()
-    #for line in lines:
-        #splitTweets = splitTweets + line.split("|")
-    for tweet in splitTweets:
+    lines = csvFile.readlines()
+    for line in lines:
+        splitTweets = line.split("|")
+        tmp = splitTweets[2][0:len(splitTweets[2])-1]
+        lati.append(splitTweets[1])
+        long.append(tmp)
+    for tweet in lines:
         # Counts the number of total tweet
         totalTweets = totalTweets + 1
         # Appends the length of the tweets to an array
@@ -79,7 +87,7 @@ def calculateValues():
             negativeTotalText = negativeTotalText + tweet
         else:
             neutralSentimentArray.append(tweet)
-            # Adds words to dictionaries
+    #Adds words to dictionaries based on sentiment
     wordFreq(dictWordFreq, totalTweetText)
     wordFreq(posWordFreq, positiveTotalText)
     wordFreq(negWordFreq, negativeTotalText)
@@ -96,21 +104,12 @@ def printStats(numberOfWords):
 
 def printGraphs(numberOfWords):
     global sortedAll
-    # Counts the most common words
+    global lati
+    global long
+    # Counts the most common words for all sentiment, positive sentiment, and neutral sentiment
     sortedAll = dict(sorted(dictWordFreq.items(), key=operator.itemgetter(1), reverse = True))
     sortedPos = dict(sorted(posWordFreq.items(), key=operator.itemgetter(1), reverse = True))
     sortedNeg = dict(sorted(negWordFreq.items(), key=operator.itemgetter(1), reverse = True))
-   # print(sortedAll)
-    #print(sortedPos)
-    #print(sortedNeg)
-    #wordCount = Counter(totalTweetText.split(" "))
-    # wordCount = Counter(totalTweetText.split(" "))
-    # Counts the most common words in positive tweets
-    #positiveWordCount = Counter(positiveTotalText.split(" "))
-    # positiveWordCount = Counter(positiveTotalText.split(" "))
-    # Counts the most common words in negative tweets
-    #negativeWordCount = Counter(negativeTotalText.split(" "))
-    # negativeWordCount = Counter(negativeTotalText.split(" "))
     # Bins for graphs
     characterBins = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240]
     wordBins = [0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48]
@@ -140,21 +139,24 @@ def printGraphs(numberOfWords):
         print("No negative tweets found")
     else: wordGraphs(sortedNeg, "Negative", numberOfWords)
 
+    #Prints dots on location of tweet on US map
+    fig = go.Figure(data= go.Scattergeo(lon = long,lat = lati,mode = 'markers'))
+    fig.update_layout(title='Tweet Locations',geo_scope = 'usa')
+    fig.show()
+
+
 
 def wordGraphs(wordCount, sentiment, numberOfWords):
-    # Creates a bar graph of most common words
-    #info = wordCount.most_common(10)
-    #global sortedAll
+    #Initializing variables
     info = []
     count = 0
+    #Appends keys and values, increases count by 1, if count == numberofwords breaks the program
     for key, value in wordCount.items():
         info.append([key, value])
         count += 1
         if count == numberOfWords:
             break
-
-    print(info)
-    #print(wordCount.most_common(5))
+    #Unpacks values and formats the graph
     names, values = zip(*info)
     ind = np.arange(len(info))
     width = 0.35
@@ -165,6 +167,7 @@ def wordGraphs(wordCount, sentiment, numberOfWords):
     ax.set_title('Bar Graph of Most Frequent ' + sentiment + ' Words')
     ax.set_xticks(ind+width/2.)
     ax.set_xticklabels(names)
+    #Formatting the graph
     def autolabel(rects):
         for rect in rects:
             height = rect.get_height()
@@ -177,6 +180,7 @@ def wordGraphs(wordCount, sentiment, numberOfWords):
 
     # Creates filtered bar graph for most common words
     removeList = ["a","an","the","but","by","be","to","of","in","that","have","I","it","for","as","not","this", "and", "on", "is", "The", "would", "are", "were", "u","having", "has", "at", "been", "when", "which", "who", "their", "so", "up", "or", "yet", "=", "with","could","because","into","my", "you", "If", "This", "It", "Since", "all", "All", "since", "was", "Was", "your", "-", "his", "&amp;", "#COVID", "#covid","#COVID-19","#covid-19", "will", "can", " ", "they", "if", "He", "She", "she", "  ", "   ", "from", "us", "we", "A", "our", "You", "Your","how","about", "In", "How", "About", "do","Are","''",'',"", "during", "COVID-19", "COVID", "w/"]
+    # Checks each word in wordCount for words in the remove list, deletes words if found
     for word in removeList:
         if word in wordCount:
             del wordCount[word]
@@ -221,9 +225,11 @@ def median(data):
         median = data[len(data) // 2]
     return median
 
-
+# Takes argument for the amount of words displayed on the graph, if not specified it defaults to 5
 arguments = len(sys.argv) - 1
 if arguments == 1:
     numberOfWords = int(sys.argv[1])
+
+#Runs program
 calculateValues()
 printStats(numberOfWords)

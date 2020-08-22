@@ -1,0 +1,109 @@
+# Importing libraries
+
+import numpy as np
+import operator
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import sys
+import matplotlib.pyplot as plt
+import plotly
+import plotly.graph_objs as go
+
+
+
+
+
+# Initializing variables
+totalTweets = 0
+tweetArray = []
+wordArray = []
+positiveTotalText = ""
+negativeTotalText = ""
+positiveSentimentArray = []
+neutralSentimentArray = []
+negativeSentimentArray = []
+splitTweets = []
+totalTweetText = ""
+dictWordFreq = {}
+posWordFreq = {}
+negWordFreq = {}
+sortedAll = {}
+numberOfWords = 5
+coordinateDict = {}
+
+
+def wordFreq(dict, wordText):
+    words = wordText.split(" ")
+    for word in words:
+        if word not in dict:
+            dict[word] = 0
+        dict[word] += 1
+
+
+
+def calculateValues():
+    # Creating global variables
+    global totalLen
+    global totalTweets
+    global tweetArray
+    global totalWords
+    global wordArray
+    global positiveSentimentArray
+    global neutralSentimentArray
+    global negativeSentimentArray
+    global totalTweetText
+    global positiveTotalText
+    global negativeTotalText
+    global splitTweets
+    global posWordFreq
+    global negWordFreq
+    global dictWordFreq
+
+
+    #vader = SentimentIntensityAnalyzer()
+    #Opens csv file using UTF-8 encoding
+    csvFile = open('tweeta.csv', 'r', encoding = 'utf-8')
+    lines = csvFile.readlines()
+    splitTweets = []
+    lati = []
+    long = []
+    for line in lines:
+       splitTweets = line.split("|")
+       tmp = splitTweets[2][0:len(splitTweets[2])-1]
+       lati.append(splitTweets[1])
+       long.append(tmp)
+
+
+    fig = go.Figure(data= go.Scattergeo(
+
+
+        lon = long,
+        lat = lati,
+        mode = 'markers'
+    ))
+    fig.update_layout(title='Tweet Locations',geo_scope = 'usa')
+    fig.show()
+   #
+   #for line in lines:
+   #   temp = line.split("|")
+   #   splitTweets.append(temp[0])
+   #   tmp = temp[2][ 0: len(temp[2])-1]
+   #   coordinateDict.update({temp[1]: tmp})
+   #
+   # geoplotlib.dot(coordinateDict,point_size=3)
+   # geoplotlib.show()
+
+
+
+
+
+   # mymap = plt.imread('C:/my_map.png')
+
+  # BBox = ((coordinateDict.values().min(),   coordinateDict.values().max(),
+  #       coordinateDict.keys().min(), coordinateDict.keys().max())
+  #  fig, ax = plt.subplots(figsize = (8,7))ax.scatter(coordinateDict.values(), coordinateDict.keys, zorder=1, alpha= 0.2, c='b', s=10)ax.set_title('Plotting Spatial Data on US Map')
+  #  ax.set_xlim(BBox[0],BBox[1])
+  #  ax.set_ylim(BBox[2],BBox[3])ax.imshow(ruh_m, zorder=0, extent = BBox, aspect= 'equal')
+
+
+calculateValues()
+
