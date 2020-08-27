@@ -28,7 +28,7 @@ numberOfWords = 5
 lati = []
 long = []
 
-
+class TweetAnalyzer(tweepy.StreamListener):
 
 def wordFreq(dict, wordText):
     words = wordText.split(" ")
