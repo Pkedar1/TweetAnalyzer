@@ -5,6 +5,8 @@ import operator
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import sys
 import plotly.graph_objs as go
+import pandas as pd
+
 
 
 # Initializing variables
@@ -143,6 +145,19 @@ def printGraphs(numberOfWords):
     fig = go.Figure(data= go.Scattergeo(lon = long,lat = lati,mode = 'markers'))
     fig.update_layout(title='Tweet Locations',geo_scope = 'usa')
     fig.show()
+    
+    #Creates chloropleth map for COVID-19 cases in the last 7 days based on CDC data
+    df = pd.read_csv('casesby7days.csv')
+    fig = go.Figure(data=go.Choropleth(locations=df['State/Territory'], z = df['Cases in Last 7 Days'].astype(float), locationmode = 'USA-states',colorscale = 'Reds',colorbar_title = "Thousands of Cases",))
+    fig.update_layout(title_text = 'COVID Cases in last 7 Days',geo_scope='usa')
+    fig.show()
+
+    # Creates overlay of COVID-19 cases + COVID-19 tweets map
+    fig = go.Figure(data=go.Choropleth(locations=df['State/Territory'], z = df['Cases in Last 7 Days'].astype(float), locationmode = 'USA-states',colorscale = 'Reds',colorbar_title = "Thousands of Cases",))
+    fig.add_traces(go.Scattergeo(lon=long,lat=lati,mode="markers"))
+    fig.update_layout(title_text = 'COVID Cases in last 7 Days',geo_scope='usa')
+    fig.show()
+
 
 
 
