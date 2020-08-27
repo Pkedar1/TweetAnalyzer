@@ -3,10 +3,7 @@ import sys
 import json
 
 # Keys from Twitter Dev Console
-consumer_key = "QobA0uHXSEzzKaCDdY6KkrYJs"
-consumer_secret = "frtKiSfi71JUSxmPkR8aXzhvM7oUB62G7TmlZA0aFoylZpVL9A"
-access_token = "798271300775112705-ZEgbi48y0ImeKKSxmoW4euzXRk0RqjO"
-access_token_secret = "5Pqzq4t8ypTxzYg3AaTfvpM7vgOdViWwzbnzMQgIZiAwD"
+
 try:
     # Creating authentication object
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
