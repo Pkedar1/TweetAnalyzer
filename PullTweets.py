@@ -3,7 +3,10 @@ import sys
 import json
 
 # Keys from Twitter Dev Console
-
+consumer_key = "QobA0uHXSEzzKaCDdY6KkrYJs"
+consumer_secret = "frtKiSfi71JUSxmPkR8aXzhvM7oUB62G7TmlZA0aFoylZpVL9A"
+access_token = "798271300775112705-ZEgbi48y0ImeKKSxmoW4euzXRk0RqjO"
+access_token_secret = "5Pqzq4t8ypTxzYg3AaTfvpM7vgOdViWwzbnzMQgIZiAwD"
 try:
     # Creating authentication object
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
@@ -11,7 +14,7 @@ try:
     auth.set_access_token(access_token, access_token_secret)
     # Creating the API object while passing in auth information
     api = tweepy.API(auth)
-    csvFile = open('tweeta.csv', 'a')
+    csvFile = open('car.csv', 'a')
 
 except:
     print("Authentication Failed")
@@ -42,4 +45,4 @@ class StreamListener(tweepy.StreamListener):
 streamListener = StreamListener()
 myStream = tweepy.Stream(auth = api.auth, listener=streamListener, tweet_mode = "extended")
 #myStream.filter(follow = ['14499829', "15134240", "820452522494226433", "189868631", "40156330", "2426189960", "39416218", "75937326", "2353701600", "1094762324097822720", "28023025", "1236557193752657926", "224896427", "487673211", "704282873231237121", "394087611", "18831926"], languages=["en"])
-myStream.filter(track=["COVID", "COVID-19", "coronavirus"], languages=["en"])
+myStream.filter(track=["Toyota", "Honda", "Chevrolet","Nissan","Ford","Civic","Accord","CR-V","Odyssey","Sienna","Prius","Tacoma","Highlander","Pathfinder","Altima","Rogue","Mustang","F-150","Fusion","Fiesta","Corvette","Camaro","Malibu","Impala","Silverado","Tahoe"], languages=["en"])

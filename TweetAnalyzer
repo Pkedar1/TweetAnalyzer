@@ -5,7 +5,6 @@ import operator
 import nltk
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from nltk.corpus import stopwords
-nltk.download('stopwords')
 import sys
 import plotly.graph_objs as go
 import pandas as pd
@@ -30,120 +29,55 @@ sortedAll = {}
 numberOfWords = 5
 lati = []
 long = []
+tweetList = []
 
 class Stats:
     def __init__(self, dataArr):
         self.dataarray = dataArr
 
     def mean(self):
-      return float(sum(self.dataarray)/len(self.dataarray))
+        return float(sum(self.dataarray)/len(self.dataarray))
 
     def totalcount(self):
-     return len(self.dataarray)
+        return len(self.dataarray)
 
 
     def variance(self):
-      mu = self.mean()
-      sumv = 0
-      for x in self.dataarray:
-          sumv = sumv + (x - mu) ** 2
-      return float(sumv/self.totalcount())
+        mu = self.mean()
+        sumv = 0
+        for x in self.dataarray:
+            sumv = sumv + (x - mu) ** 2
+        return float(sumv/self.totalcount())
 
     def stddev(self):
-       stddev = (self.variance()**(.5))
-       return stddev
+        stddev = (self.variance()**(.5))
+        return stddev
 
     def median(self):
 
-       self.dataarray.sort()
-       if len(self.dataarray) % 2 == 0:
-        first_median = self.dataarray[len(self.dataarray) // 2]
-        second_median = self.dataarray[len(self.dataarray) // 2 - 1]
-        median = (first_median + second_median) / 2
-       else:
-        median = self.dataarray[len(self.dataarray) // 2]
+        self.dataarray.sort()
+        if len(self.dataarray) % 2 == 0:
+            first_median = self.dataarray[len(self.dataarray) // 2]
+            second_median = self.dataarray[len(self.dataarray) // 2 - 1]
+            median = (first_median + second_median) / 2
+        else:
+            median = self.dataarray[len(self.dataarray) // 2]
 
-       return median
+        return median
 
+class Tweet:
 
-class TweetAnalyzer:
+    def __init__(self, tweet, lat, long, sentiment):
+        self.tweet = tweet
+        self.latitude = lat
+        self.longitude = long
+        self.sentiment = sentiment
 
+    def tweetlen(self):
+        return len(self.tweet)
 
-  def __init__(self, tweetArr):
-      self.tweets = tweetArr
-
-      self.twlenarray = []
-      self.wordarray = []
-
-      for tw in self.tweets:
-        self.twlenarray.append(len(tw))
-        self.wordarray.append(len(tw.split(" ")))
-
-  def wordStats(self):
-    return Stats(self.wordarray)
-
-  def tweetStats(self):
-    return Stats(self.twlenarray)
-
-  def tweetlenarr(self):
-      return self.twlenarray
-
-  def wordarr(self):
-      return self.wordarray
-
-
-class TweetSentimentAnalyzer(TweetAnalyzer):
-
-    def __init__(self,tweetArray):
-        super().__init__(tweetArray)
-        self.psarray = []
-        self.ngarray = []
-        self.ntarray = []
-        self.dictword = {}
-        self.dictpos = {}
-        self.dictneg = {}
-        self.alltext = ""
-        self.postext = ""
-        self.negtext = ""
-        vader = SentimentIntensityAnalyzer()
-        for tw in self.tweets:
-            sentimentAnalysis = vader.polarity_scores(tw)
-            self.alltext = self.alltext + " " + tw
-            if sentimentAnalysis['compound'] > .05:
-               self.psarray.append(tw)
-               self.postext = self.postext + " " + tw
-            elif sentimentAnalysis['compound'] < -.05:
-               self.ngarray.append(tw)
-               self.negtext = self.negtext + " " + tw
-            else:
-               self.ntarray.append(tw)
-
-
-    def psarr(self):
-          return self.psarray
-
-    def ngarr(self):
-          return self.ngarray
-
-    def ntarr(self):
-          return self.ntarray
-
-
-    def dictWordFreq(self):
-
-        wordFreq(self.dictword, self.alltext)
-        return self.dictword
-
-    def posWordFreq(self):
-
-        wordFreq(self.dictpos, self.postext)
-        return self.dictpos
-
-    def negWordFreq(self):
-
-        wordFreq(self.dictneg, self.negtext)
-        return self.dictneg
-
+    def wordlen(self):
+        return len(self.tweet.split(" "))
 
 def wordFreq(dict, wordText):
     words = wordText.split(" ")
@@ -152,72 +86,120 @@ def wordFreq(dict, wordText):
             dict[word] = 0
         dict[word] += 1
 
+
+
 def calculateValues():
+    # Creating global variables
+    global totalTweets
+    global wordArray
+    global positiveSentimentArray
+    global neutralSentimentArray
+    global negativeSentimentArray
+    global totalTweetText
+    global positiveTotalText
+    global negativeTotalText
+    global splitTweets
+    global posWordFreq
+    global negWordFreq
+    global dictWordFreq
+    global lati
+    global long
+    global tweetList
 
-    global sentiData
-
+    vader = SentimentIntensityAnalyzer()
     #Opens csv file using UTF-8 encoding
-    csvFile = open('tweeta.csv', 'r', encoding = 'utf-8')
+    csvFile = open('car.csv', 'r', encoding = 'utf-8')
     #Reads csv file
     lines = csvFile.readlines()
     for line in lines:
         splitTweets = line.split("|")
         tmp = splitTweets[2][0:len(splitTweets[2])-1]
-        lati.append(splitTweets[1])
-        long.append(tmp)
-    for tweet in lines:
-        # Appends the tweets to an array
-        tweetArray.append(tweet.lower())
 
-    sentiData = TweetSentimentAnalyzer(tweetArray)
+        atweet = splitTweets[0]
+        sentimentAnalysis = vader.polarity_scores(atweet)
+        if sentimentAnalysis['compound'] > .05:
+            sentiment =  1
+        elif sentimentAnalysis['compound'] < -.05:
+            sentiment = -1
+        else:
+            sentiment = 0
 
+        tweetval = Tweet(atweet.lower(),splitTweets[1],tmp,sentiment)
+        tweetList.append(tweetval)
+
+
+    for mytweet in tweetList:
+        # Counts the number of total tweet
+        totalTweets = totalTweets + 1
+        # Appends the length of the tweets to an array
+        tweetArray.append(len(mytweet.tweet))
+        # Appends the split tweet to itself
+        wordArray.append(len(mytweet.tweet.split(" ")))
+        # Adds all text of all tweets
+        totalTweetText = totalTweetText + mytweet.tweet
+        # Performs sentinent anaylsis
+        lati.append(mytweet.latitude)
+        long.append(mytweet.longitude)
+        # Decides whether to classify a tweet as positive/negative/neutral
+        if mytweet.sentiment == 1:
+            positiveSentimentArray.append(mytweet)
+            positiveTotalText = positiveTotalText + mytweet.tweet
+        elif mytweet.sentiment == -1:
+            negativeSentimentArray.append(mytweet.tweet)
+            negativeTotalText = negativeTotalText + mytweet.tweet
+        else:
+            neutralSentimentArray.append(mytweet.tweet)
+    #Adds words to dictionaries based on sentiment
+    wordFreq(dictWordFreq, totalTweetText)
+    wordFreq(posWordFreq, positiveTotalText)
+    wordFreq(negWordFreq, negativeTotalText)
 
 # Prints all statistics and graphs
 def printStats(numberOfWords):
-    global sentiData
     # Prints a list of statistics(mean, median, variance) for both characters and words
-    print("Average Character Length of Collected Tweets: ", sentiData.tweetStats().mean(), "Total Tweets Collected: ", sentiData.tweetStats().totalcount(), "Standard Deviation of Characters in Collected Tweets: ", sentiData.tweetStats().stddev(),"Median of Characters in Collected Tweets: ", sentiData.tweetStats().median(), "Variance of Characters in Collected Tweets: ", sentiData.tweetStats().variance(), "Average Word Count of Collected Tweets: ", sentiData.wordStats().mean(), "Standard Deviation of Words in Collected Tweets: ", sentiData.wordStats().stddev(), "Variance of Words in Collected Tweets: ", sentiData.wordStats().variance(), "Median of Words in Collected Tweets: ", sentiData.wordStats().median())
+    tweetStats = Stats(tweetArray)
+    wordStats = Stats(wordArray)
+    print("Average Character Length of Collected Tweets: ", tweetStats.mean(), "Total Tweets Collected: ", tweetStats.totalcount(), "Standard Deviation of Characters in Collected Tweets: ", tweetStats.stddev(),"Median of Characters in Collected Tweets: ", tweetStats.median(), "Variance of Characters in Collected Tweets: ", tweetStats.variance(), "Average Word Count of Collected Tweets: ", wordStats.mean(), "Standard Deviation of Words in Collected Tweets: ", wordStats.stddev(), "Variance of Words in Collected Tweets: ", wordStats.variance(), "Median of Words in Collected Tweets: ", wordStats.median())
     # Prints all positive, neutral, and negative tweets
-    print("Positive Tweets: " + str(sentiData.psarr()) + "Neutral/Undecided Tweets:" + str(sentiData.ntarr()) + "Negative Tweets: " + str(sentiData.ngarr()))
+    print("Positive Tweets: " + str(positiveSentimentArray) + "Neutral/Undecided Tweets:" + str(neutralSentimentArray) + "Negative Tweets: " + str(negativeSentimentArray))
     # Prints graphs for characters + words
     printGraphs(numberOfWords)
 
 
 def printGraphs(numberOfWords):
-    global sortedAll
-    global lati
-    global long
-    global sentiData
+    tweetStats = Stats(tweetArray)
+    wordStats = Stats(wordArray)
+
     # Counts the most common words for all sentiment, positive sentiment, and neutral sentiment
-    sortedAll = dict(sorted(sentiData.dictWordFreq().items(), key=operator.itemgetter(1), reverse = True))
-    sortedPos = dict(sorted(sentiData.posWordFreq().items(), key=operator.itemgetter(1), reverse = True))
-    sortedNeg = dict(sorted(sentiData.negWordFreq().items(), key=operator.itemgetter(1), reverse = True))
+    sortedAll = dict(sorted(dictWordFreq.items(), key=operator.itemgetter(1), reverse = True))
+    sortedPos = dict(sorted(posWordFreq.items(), key=operator.itemgetter(1), reverse = True))
+    sortedNeg = dict(sorted(negWordFreq.items(), key=operator.itemgetter(1), reverse = True))
     # Bins for graphs
     characterBins = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240]
     wordBins = [0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48]
     # Prints a histogram for characters of collected tweets
-    plt.hist(sentiData.tweetlenarr(), bins = characterBins, histtype = 'bar', color='#0504aa', alpha = .7, rwidth = .8)
+    plt.hist(tweetArray, bins = characterBins, histtype = 'bar', color='#0504aa', alpha = .7, rwidth = .8)
     plt.grid(axis='y', alpha=0.75)
     plt.xlabel("Number of Characters")
     plt.ylabel("Frequency")
     plt.title("Histogram of Character Frequency")
-    plt.text(0, 0, r'$\bar{x}=' + str(round(sentiData.tweetStats().mean(), 2)) + ', Sx= $ ' + str(round(sentiData.tweetStats().stddev(), 2)))
+    plt.text(0, 0, r'$\bar{x}=' + str(tweetStats.mean()) + ', Sx= $ ' + str(tweetStats.stddev()))
     plt.show()
 
     # Prints a histogram for words of collected tweets
-    plt.hist(sentiData.wordarray, bins = wordBins, histtype = 'bar', color='#0504aa', alpha = .7, rwidth = .8)
+    plt.hist(wordArray, bins = wordBins, histtype = 'bar', color='#0504aa', alpha = .7, rwidth = .8)
     plt.grid(axis='y', alpha=0.75)
     plt.xlabel("Number of Words")
     plt.ylabel("Frequency")
     plt.title("Histogram of Word Frequency")
-    plt.text(0, 0, r'$\bar{x}=' + str(round(sentiData.wordStats().mean(), 2)) + ', Sx= $ ' + str(round(sentiData.wordStats().stddev(), 2)))
+    plt.text(0, 0, r'$\bar{x}=' + str(wordStats.mean()) + ', Sx= $ ' + str(wordStats.stddev()))
     plt.show()
     wordGraphs(sortedAll, "", numberOfWords)
     # Does not print a graph if tweets are not found
-    if sentiData.psarr() == []:
+    if positiveSentimentArray == []:
         print("No positive tweets found")
     else:wordGraphs(sortedPos, "Positive", numberOfWords)
-    if sentiData.ngarr() == []:
+    if negativeSentimentArray == []:
         print("No negative tweets found")
     else: wordGraphs(sortedNeg, "Negative", numberOfWords)
 
@@ -242,18 +224,12 @@ def printGraphs(numberOfWords):
 
 
 def wordGraphs(wordCount, sentiment, numberOfWords):
-    #Initializing variables
-    info = []
-    count = 0
-    #Appends keys and values, increases count by 1, if count == numberofwords breaks the program
-    for key, value in wordCount.items():
-        info.append([key, value])
-        count += 1
-        if count == numberOfWords:
-            break
+
+    tdict = dict(sorted(wordCount.items(), key=operator.itemgetter(1), reverse = True)[:numberOfWords])
     #Unpacks values and formats the graph
-    names, values = zip(*info)
-    ind = np.arange(len(info))
+    names = tdict.keys()
+    values = tdict.values()
+    ind = np.arange(len(tdict))
     width = 0.35
     fig, ax = plt.subplots()
     rects1 = ax.bar(ind, values, width, color='r')
@@ -273,19 +249,21 @@ def wordGraphs(wordCount, sentiment, numberOfWords):
     autolabel(rects1)
     plt.show()
 
+
+    # Creates filtered bar graph for most common words
     # Checks each word in wordCount for words in the remove list, deletes words if found
-    for word in stopwords.words():
+    stopwords = nltk.corpus.stopwords.words('english')
+    newStopWords = ['',"-","@", "&amp;", "","\xe2\x80\xa6", "\\xe2\\x80\\xa2"]
+    stopwords.extend(newStopWords)
+    for word in stopwords:
         if word in wordCount:
             del wordCount[word]
-    info = []
-    count = 0
-    for key, value in wordCount.items():
-        info.append([key, value])
-        count += 1
-        if count == numberOfWords:
-            break
-    names, values = zip(*info)
-    ind = np.arange(len(info))
+
+
+    fdict = dict(sorted(wordCount.items(), key=operator.itemgetter(1), reverse = True)[:numberOfWords])
+    names = fdict.keys()
+    values = fdict.values()
+    ind = np.arange(len(fdict))
     width = 0.35
     fig, ax = plt.subplots()
     rects1 = ax.bar(ind, values, width, color='r')
@@ -297,8 +275,6 @@ def wordGraphs(wordCount, sentiment, numberOfWords):
     autolabel(rects1)
     plt.show()
 
-
-
 # Takes argument for the amount of words displayed on the graph, if not specified it defaults to 5
 arguments = len(sys.argv) - 1
 if arguments == 1:
@@ -307,3 +283,5 @@ if arguments == 1:
 #Runs program
 calculateValues()
 printStats(numberOfWords)
+
+
