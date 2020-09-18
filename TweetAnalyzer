@@ -23,7 +23,6 @@ from collections import Counter
 import plotly as px
 from cleantext import clean
 from textblob import TextBlob
-import csv
 from unidecode import unidecode
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
