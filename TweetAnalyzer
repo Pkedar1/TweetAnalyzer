@@ -23,8 +23,6 @@ from collections import Counter
 import plotly as px
 from cleantext import clean
 from textblob import TextBlob
-from unidecode import unidecode
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 # Initializing variables
 totalTweets = 0
