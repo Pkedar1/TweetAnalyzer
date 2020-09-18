@@ -45,4 +45,4 @@ class StreamListener(tweepy.StreamListener):
 streamListener = StreamListener()
 myStream = tweepy.Stream(auth = api.auth, listener=streamListener, tweet_mode = "extended")
 #myStream.filter(follow = ['14499829', "15134240", "820452522494226433", "189868631", "40156330", "2426189960", "39416218", "75937326", "2353701600", "1094762324097822720", "28023025", "1236557193752657926", "224896427", "487673211", "704282873231237121", "394087611", "18831926"], languages=["en"])
-myStream.filter(track=["Toyota", "Honda", "Chevrolet","Nissan","Ford","Civic","Accord","CR-V","Odyssey","Sienna","Prius","Tacoma","Highlander","Pathfinder","Altima","Rogue","Mustang","F-150","Fusion","Fiesta","Corvette","Camaro","Malibu","Impala","Silverado","Tahoe"], languages=["en"])
+myStream.filter(track=["Coronavirus", "covid-19", "covid"], languages=["en"])

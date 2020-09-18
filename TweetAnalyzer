@@ -1,15 +1,31 @@
+################################################################################
+# Copyright (c) 2020 Predii, Inc.
+#
+# Predii Confidential and Proprietary
+#
+# This software is the confidential and proprietary information of Predii.
+# Predii reserves all rights in this software. This software or any portion
+# thereof may not be reproduced (in any form whatsoever) except as
+# expressly provided by license without the written consent of Predii.################################################################################
+
+
+
 # Importing libraries
 import matplotlib.pyplot as plt
 import numpy as np
 import operator
 import nltk
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from nltk.corpus import stopwords
 import sys
 import plotly.graph_objs as go
 import pandas as pd
-
-
+from collections import Counter
+import plotly as px
+from cleantext import clean
+from textblob import TextBlob
+import csv
+from unidecode import unidecode
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 # Initializing variables
 totalTweets = 0
@@ -30,6 +46,7 @@ numberOfWords = 5
 lati = []
 long = []
 tweetList = []
+neutralTotalText = ""
 
 class Stats:
     def __init__(self, dataArr):
@@ -105,27 +122,28 @@ def calculateValues():
     global lati
     global long
     global tweetList
+    global neutralTotalText
 
-    vader = SentimentIntensityAnalyzer()
     #Opens csv file using UTF-8 encoding
-    csvFile = open('car.csv', 'r', encoding = 'utf-8')
+    csvFile = open('2008.txt', 'r',encoding="utf-8")
     #Reads csv file
     lines = csvFile.readlines()
     for line in lines:
-        splitTweets = line.split("|")
-        tmp = splitTweets[2][0:len(splitTweets[2])-1]
-
-        atweet = splitTweets[0]
-        sentimentAnalysis = vader.polarity_scores(atweet)
-        if sentimentAnalysis['compound'] > .05:
-            sentiment =  1
-        elif sentimentAnalysis['compound'] < -.05:
-            sentiment = -1
-        else:
-            sentiment = 0
-
-        tweetval = Tweet(atweet.lower(),splitTweets[1],tmp,sentiment)
-        tweetList.append(tweetval)
+        #Finds the text in the file with the review data
+        if line.find("<TEXT>", 0, 10) > -1:
+            #Cleans the punctuation from the tweet
+            atweet = clean(line[6:len(line)-8], no_punct=True)
+            #Performs sentiment analysis
+            analysis = TextBlob(atweet)
+            #Sets the sentiment of the tweet to positive, negative, or neutral
+            if analysis.sentiment.polarity > 0:
+                sentiment = 1
+            elif analysis.sentiment.polarity < 0:
+                sentiment = -1
+            else:
+                sentiment = 0
+            tweetval = Tweet(atweet.lower(),0,0,sentiment)
+            tweetList.append(tweetval)
 
 
     for mytweet in tweetList:
@@ -137,18 +155,20 @@ def calculateValues():
         wordArray.append(len(mytweet.tweet.split(" ")))
         # Adds all text of all tweets
         totalTweetText = totalTweetText + mytweet.tweet
-        # Performs sentinent anaylsis
+        # Adds the longitudes and latitudes of each tweet to a list
         lati.append(mytweet.latitude)
         long.append(mytweet.longitude)
         # Decides whether to classify a tweet as positive/negative/neutral
         if mytweet.sentiment == 1:
-            positiveSentimentArray.append(mytweet)
+            positiveSentimentArray.append(mytweet.tweet)
             positiveTotalText = positiveTotalText + mytweet.tweet
         elif mytweet.sentiment == -1:
             negativeSentimentArray.append(mytweet.tweet)
             negativeTotalText = negativeTotalText + mytweet.tweet
         else:
             neutralSentimentArray.append(mytweet.tweet)
+            neutralTotalText = neutralTotalText + mytweet.tweet
+
     #Adds words to dictionaries based on sentiment
     wordFreq(dictWordFreq, totalTweetText)
     wordFreq(posWordFreq, positiveTotalText)
@@ -161,7 +181,10 @@ def printStats(numberOfWords):
     wordStats = Stats(wordArray)
     print("Average Character Length of Collected Tweets: ", tweetStats.mean(), "Total Tweets Collected: ", tweetStats.totalcount(), "Standard Deviation of Characters in Collected Tweets: ", tweetStats.stddev(),"Median of Characters in Collected Tweets: ", tweetStats.median(), "Variance of Characters in Collected Tweets: ", tweetStats.variance(), "Average Word Count of Collected Tweets: ", wordStats.mean(), "Standard Deviation of Words in Collected Tweets: ", wordStats.stddev(), "Variance of Words in Collected Tweets: ", wordStats.variance(), "Median of Words in Collected Tweets: ", wordStats.median())
     # Prints all positive, neutral, and negative tweets
-    print("Positive Tweets: " + str(positiveSentimentArray) + "Neutral/Undecided Tweets:" + str(neutralSentimentArray) + "Negative Tweets: " + str(negativeSentimentArray))
+    print("Positive Tweets: "+ str(positiveSentimentArray) )
+
+    print("Neutral/Undecided Tweets:" + str(neutralSentimentArray))
+    print("Negative Tweets: " + str(negativeSentimentArray))
     # Prints graphs for characters + words
     printGraphs(numberOfWords)
 
@@ -194,86 +217,100 @@ def printGraphs(numberOfWords):
     plt.title("Histogram of Word Frequency")
     plt.text(0, 0, r'$\bar{x}=' + str(wordStats.mean()) + ', Sx= $ ' + str(wordStats.stddev()))
     plt.show()
-    wordGraphs(sortedAll, "", numberOfWords)
+    wordGraphs(sortedAll, "", numberOfWords, neutralTotalText)
     # Does not print a graph if tweets are not found
     if positiveSentimentArray == []:
         print("No positive tweets found")
-    else:wordGraphs(sortedPos, "Positive", numberOfWords)
+    else:wordGraphs(sortedPos, "Positive", numberOfWords, positiveTotalText)
     if negativeSentimentArray == []:
         print("No negative tweets found")
-    else: wordGraphs(sortedNeg, "Negative", numberOfWords)
+    else: wordGraphs(sortedNeg, "Negative", numberOfWords, negativeTotalText)
 
     #Prints dots on location of tweet on US map
-    fig = go.Figure(data= go.Scattergeo(lon = long,lat = lati,mode = 'markers'))
-    fig.update_layout(title='Tweet Locations',geo_scope = 'usa')
-    fig.show()
+    # fig = go.Figure(data= go.Scattergeo(lon = long,lat = lati,mode = 'markers'))
+    #fig.update_layout(title='Tweet Locations',geo_scope = 'usa')
+    #fig.show()
 
-    #Creates chloropleth map for COVID-19 cases in the last 7 days based on CDC data
-    df = pd.read_csv('casesby7days.csv')
-    fig = go.Figure(data=go.Choropleth(locations=df['State/Territory'], z = df['Cases in Last 7 Days'].astype(float), locationmode = 'USA-states',colorscale = 'Reds',colorbar_title = "Thousands of Cases",))
-    fig.update_layout(title_text = 'COVID Cases in last 7 Days',geo_scope='usa')
-    fig.show()
+    ##Creates chloropleth map for COVID-19 cases in the last 7 days based on CDC data
+    #df = pd.read_csv('casesby7days.csv')
+    #fig = go.Figure(data=go.Choropleth(locations=df['State/Territory'], z = df['Cases in Last 7 Days'].astype(float), locationmode = 'USA-states',colorscale = 'Reds',colorbar_title = "Thousands of Cases",))
+    #fig.update_layout(title_text = 'COVID Cases in last 7 Days',geo_scope='usa')
+    #fig.show()
 
-    # Creates overlay of COVID-19 cases + COVID-19 tweets map
-    fig = go.Figure(data=go.Choropleth(locations=df['State/Territory'], z = df['Cases in Last 7 Days'].astype(float), locationmode = 'USA-states',colorscale = 'Reds',colorbar_title = "Thousands of Cases",))
-    fig.add_traces(go.Scattergeo(lon=long,lat=lati,mode="markers"))
-    fig.update_layout(title_text = 'COVID Cases in last 7 Days',geo_scope='usa')
-    fig.show()
+    ## Creates overlay of COVID-19 cases + COVID-19 tweets map
+    #fig = go.Figure(data=go.Choropleth(locations=df['State/Territory'], z = df['Cases in Last 7 Days'].astype(float), locationmode = 'USA-states',colorscale = 'Reds',colorbar_title = "Thousands of Cases",))
+    #fig.add_traces(go.Scattergeo(lon=long,lat=lati,mode="markers"))
+    #fig.update_layout(title_text = 'COVID Cases in last 7 Days',geo_scope='usa')
+    #fig.show()
 
-
-
-
-def wordGraphs(wordCount, sentiment, numberOfWords):
-
+def wordGraphs(wordCount, sentiment, numberOfWords, textType):
     tdict = dict(sorted(wordCount.items(), key=operator.itemgetter(1), reverse = True)[:numberOfWords])
     #Unpacks values and formats the graph
     names = tdict.keys()
     values = tdict.values()
-    ind = np.arange(len(tdict))
-    width = 0.35
-    fig, ax = plt.subplots()
-    rects1 = ax.bar(ind, values, width, color='r')
-    ax.set_ylabel('Frequency')
-    ax.set_xlabel('Words')
-    ax.set_title('Bar Graph of Most Frequent ' + sentiment + ' Words')
-    ax.set_xticks(ind+width/2.)
-    ax.set_xticklabels(names)
-    #Formatting the graph
-    def autolabel(rects):
-        for rect in rects:
-            height = rect.get_height()
-            ax.text(rect.get_x() + rect.get_width()/2., 1.05*height,
-                    '%d' % int(height),
-                    ha='center', va='bottom')
+    y_pos = np.arange(len(names))
+    plt.barh(y_pos, values, align='center', alpha=0.5)
+    plt.yticks(y_pos, names)
+    plt.xlabel('Frequency')
+    plt.title("Most Frequent " + sentiment + "Words")
 
-    autolabel(rects1)
     plt.show()
-
 
     # Creates filtered bar graph for most common words
     # Checks each word in wordCount for words in the remove list, deletes words if found
     stopwords = nltk.corpus.stopwords.words('english')
-    newStopWords = ['',"-","@", "&amp;", "","\xe2\x80\xa6", "\\xe2\\x80\\xa2"]
+    newStopWords = ['',"-","@", "&amp;", "","car", "car.","cars","got","can't", "get", "it.", "would", "much", "ford", "honda", "toyota", "chevrolet", "nissan","isnt"]
     stopwords.extend(newStopWords)
+    filteredwords = [word for word in nltk.word_tokenize(textType) if word not in stopwords]
+
     for word in stopwords:
         if word in wordCount:
             del wordCount[word]
 
-
     fdict = dict(sorted(wordCount.items(), key=operator.itemgetter(1), reverse = True)[:numberOfWords])
     names = fdict.keys()
     values = fdict.values()
-    ind = np.arange(len(fdict))
-    width = 0.35
-    fig, ax = plt.subplots()
-    rects1 = ax.bar(ind, values, width, color='r')
-    ax.set_ylabel('Frequency')
-    ax.set_xlabel('Words')
-    ax.set_title('Bar Graph of Most Frequent ' + sentiment + ' Words(Filtered)')
-    ax.set_xticks(ind+width/2.)
-    ax.set_xticklabels(names)
-    autolabel(rects1)
+    y_pos = np.arange(len(names))
+    plt.barh(y_pos, values, align='center', alpha=0.5)
+    plt.yticks(y_pos, names)
+    plt.xlabel('Frequency')
+    plt.title("Most Frequent " + sentiment + "Words(Filtered)")
+
     plt.show()
+
+    countdict = {}
+    tuplevaluedict = {}
+    for gram in nltk.ngrams(filteredwords, 3):
+        for word in names:
+            if word in gram:
+                wordList = list(gram)
+                wordList.sort()
+                tupleabc = tuple(wordList)
+                myhash = hash(tupleabc)
+                if myhash not in countdict:
+                    countdict[myhash]=1
+                else:
+                    countdict[myhash]+=1
+                if myhash not in tuplevaluedict.keys():
+                    tuplevaluedict[myhash]=gram
+
+    tuples = tuplevaluedict.values()
+    counts = countdict.values()
+    zip_iterator = zip(tuples,counts)
+    tempdict = dict(zip_iterator)
+    gdict = dict(sorted(tempdict.items(), key = operator.itemgetter(1), reverse = True))
+
+
+    names = gdict.keys()
+    values = gdict.values()
+    y_pos = np.arange(len(names))
+    plt.barh(y_pos, values, align='center', alpha=0.5)
+    plt.yticks(y_pos, names)
+    plt.xlabel('Frequency')
+    plt.title("Most Frequent " + sentiment + " Trigrams(Filtered)")
+
+    plt.show()
+
 
 # Takes argument for the amount of words displayed on the graph, if not specified it defaults to 5
 arguments = len(sys.argv) - 1
